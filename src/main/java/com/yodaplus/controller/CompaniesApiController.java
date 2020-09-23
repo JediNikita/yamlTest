@@ -19,7 +19,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.gson.Gson;
+import com.thoughtworks.xstream.XStream;
 import com.yodaplus.yamltest.model.Company;
 import com.yodaplus.yamltest.service.CompaniesApiService;
 
@@ -28,12 +31,19 @@ public class CompaniesApiController implements CompaniesApi {
 	ConcurrentMap<String, Company> companyMap= new ConcurrentHashMap<>(); 
 
 	private static final Logger log = LoggerFactory.getLogger(CompaniesApiController.class);
-	private final ObjectMapper objectMapper=null;
-
+	private final ObjectMapper objectMapper;
+	private final HttpServletRequest request;
 
 
 	@Autowired
 	private CompaniesApiService cas;
+
+	@Autowired
+	public CompaniesApiController(ObjectMapper objectMapper, HttpServletRequest request) {
+		this.objectMapper = objectMapper;
+		this.request = request;
+	}
+
 
 	@RequestMapping(value="/", method= RequestMethod.GET)
 	public ResponseEntity<Void> showHello(){
@@ -54,14 +64,15 @@ public class CompaniesApiController implements CompaniesApi {
 	}
 
 	@Override
-	public ResponseEntity<List<Company>> findCompaniessByParams(HttpServletRequest request, @NotNull @Valid String portfolio, @Valid Boolean isPDExpired) {
+	public ResponseEntity<List<Company>> findCompaniessByParams( @NotNull @Valid String portfolio, @Valid Boolean isPDExpired) {
 		List<Company> companyList= new ArrayList<>();
-		companyList= cas.getCompanyList(companyMap, portfolio, isPDExpired);
-		
+		companyList= cas.getCompanyListByParams(companyMap, portfolio, isPDExpired);
+
 		String accept = request.getHeader("Accept");
 		if (accept != null && accept.contains("application/xml")) {
 			try {
-				return new ResponseEntity<List<Company>>(objectMapper.readValue(objectMapper.writeValueAsString(companyList), List.class) , HttpStatus.NOT_IMPLEMENTED) ;
+				return new ResponseEntity<List<Company>>(objectMapper.readValue(new XStream().toXML(companyList), new TypeReference<List<Company>>() {
+				}) , HttpStatus.OK) ;
 			} catch (IOException e) {
 				log.error("Couldn't serialize response for content type application/xml", e);
 				return new ResponseEntity<List<Company>>(HttpStatus.INTERNAL_SERVER_ERROR);
@@ -70,7 +81,8 @@ public class CompaniesApiController implements CompaniesApi {
 
 		if (accept != null && accept.contains("application/json")) {
 			try {
-				return new ResponseEntity<List<Company>>(objectMapper.readValue(objectMapper.writeValueAsString(companyList), List.class), HttpStatus.NOT_IMPLEMENTED) ;
+				return new ResponseEntity<List<Company>>(objectMapper.readValue(new Gson().toJson(companyList), new TypeReference<List<Company>>() {
+				}) , HttpStatus.OK) ;
 			} catch (IOException e) {
 				log.error("Couldn't serialize response for content type application/json", e);
 				return new ResponseEntity<List<Company>>(HttpStatus.INTERNAL_SERVER_ERROR);
@@ -81,7 +93,30 @@ public class CompaniesApiController implements CompaniesApi {
 
 	@Override
 	public ResponseEntity<Company> getCompanyById(Long companyId) {
-		return null;
+		String accept = request.getHeader("Accept");
+		Company comp= cas.getCompanyById(companyMap, companyId);
+		if(comp==null)
+			return new ResponseEntity<Company>(HttpStatus.NOT_IMPLEMENTED);
+		else {
+			if (accept != null && accept.contains("application/xml")) {
+				try {
+					return new ResponseEntity<Company>(objectMapper.readValue(new XStream().toXML(comp), Company.class), HttpStatus.OK);
+				} catch (IOException e) {
+					log.error("Couldn't serialize response for content type application/xml", e);
+					return new ResponseEntity<Company>(HttpStatus.INTERNAL_SERVER_ERROR);
+				}
+			}
+
+			if (accept != null && accept.contains("application/json")) {
+				try {
+					return new ResponseEntity<Company>(objectMapper.readValue(new Gson().toJson(comp), Company.class), HttpStatus.OK);
+				} catch (IOException e) {
+					log.error("Couldn't serialize response for content type application/json", e);
+					return new ResponseEntity<Company>(HttpStatus.INTERNAL_SERVER_ERROR);
+				}
+			}
+		}
+		return new ResponseEntity<Company>(HttpStatus.NOT_IMPLEMENTED);
 	}
 
 	@Override

@@ -2,7 +2,6 @@ package com.yodaplus.controller;
 
 import java.util.List;
 
-import javax.servlet.http.HttpServletRequest;
 import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
 
@@ -44,7 +43,7 @@ public interface CompaniesApi {
     @RequestMapping(value = "/companies/findByParams",
         produces = { "application/xml", "application/json" }, 
         method = RequestMethod.GET)
-    ResponseEntity<List<Company>> findCompaniessByParams(HttpServletRequest request, @NotNull  @Valid @RequestParam(value = "portfolio", required = true, defaultValue="active") String portfolio,@NotNull  @Valid @RequestParam(value = "isPDExpired", required = true, defaultValue="true") Boolean isPDExpired);
+    ResponseEntity<List<Company>> findCompaniessByParams(@NotNull  @Valid @RequestParam(value = "portfolio", required = true, defaultValue="active") String portfolio,@NotNull  @Valid @RequestParam(value = "isPDExpired", required = true, defaultValue="true") Boolean isPDExpired);
 
 
     
