@@ -3,7 +3,9 @@ package com.yodaplus.yamltest.model;
 
 import java.util.Objects;
 
-import org.springframework.stereotype.Component;
+import javax.persistence.Entity;
+import javax.persistence.Id;
+
 import org.springframework.validation.annotation.Validated;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
@@ -14,9 +16,9 @@ import com.fasterxml.jackson.annotation.JsonValue;
  * Company
  */
 @Validated
-@Component
+@Entity
 public class Company   {
-	@JsonProperty("id")
+	@Id @JsonProperty("id")
 	private Long id = null;
 
 	@JsonProperty("orgUniqueId")

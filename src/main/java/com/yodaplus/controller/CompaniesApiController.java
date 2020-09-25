@@ -13,8 +13,10 @@ import javax.validation.constraints.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.env.Environment;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
@@ -39,11 +41,16 @@ public class CompaniesApiController implements CompaniesApi {
 	private CompaniesApiService cas;
 
 	@Autowired
+	private JdbcTemplate jdbcTemplate;
+
+	@Autowired 
+	Environment env;
+
+	@Autowired
 	public CompaniesApiController(ObjectMapper objectMapper, HttpServletRequest request) {
 		this.objectMapper = objectMapper;
 		this.request = request;
 	}
-
 
 	@RequestMapping(value="/", method= RequestMethod.GET)
 	public ResponseEntity<Void> showHello(){
@@ -54,6 +61,18 @@ public class CompaniesApiController implements CompaniesApi {
 	@Override
 	public ResponseEntity<Void> addCompany(@Valid Company body) {
 		companyMap.put(body.getId().toString(), body);
+		jdbcTemplate.execute("CREATE TABLE IF NOT EXISTS company (\r\n" + 
+				"    ID                 INTEGER       ,\r\n" + 
+				"    COMPANYNAME        VARCHAR (100),\r\n" + 
+				"    DOMICILECOUNTRYISO VARCHAR (50),\r\n" + 
+				"    COMPANYTYPE        VARCHAR (50),\r\n" + 
+				"    ORGUNIQUEID        INTEGER,\r\n" + 
+				"    PORTFOLIO          VARCHAR (50),\r\n" + 
+				"    UNIQUEID           INTEGER\r\n" + 
+				");");
+		String sql = "INSERT INTO COMPANY (ID,COMPANYNAME,COMPANYTYPE,DOMICILECOUNTRYISO,ORGUNIQUEID, PORTFOLIO, UNIQUEID) VALUES (?,?,?,?,?,?,?);";
+		jdbcTemplate.update(sql, body.getId(), body.getCompanyName(), body.getCompanyType(), body.getDomicileCountryISO(), body.getOrgUniqueId(),
+				body.getPortfolio(), body.getUniqueId());
 		return new ResponseEntity<>(HttpStatus.OK);
 	}
 
@@ -67,7 +86,7 @@ public class CompaniesApiController implements CompaniesApi {
 	public ResponseEntity<List<Company>> findCompaniessByParams( @NotNull @Valid String portfolio, @Valid Boolean isPDExpired) {
 		List<Company> companyList= new ArrayList<>();
 		companyList= cas.getCompanyListByParams(companyMap, portfolio, isPDExpired);
-
+		/* companyList= jdbcTemplate.query*/
 		String accept = request.getHeader("Accept");
 		if (accept != null && accept.contains("application/xml")) {
 			try {
